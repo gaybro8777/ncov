@@ -5,17 +5,17 @@ version 1.0
 task ncov_ingest {
   input {
     # based off of https://github.com/nextstrain/ncov-ingest#required-environment-variables
-    String GISAID_API_ENDPOINT
-    String GISAID_USERNAME_AND_PASSWORD
-    String AWS_DEFAULT_REGION
-    String AWS_ACCESS_KEY_ID
-    String AWS_SECRET_ACCESS_KEY
+    String GISAID_API_ENDPOINT=""
+    String GISAID_USERNAME_AND_PASSWORD=""
+    String AWS_DEFAULT_REGION=""
+    String AWS_ACCESS_KEY_ID=""
+    String AWS_SECRET_ACCESS_KEY=""
     String? SLACK_TOKEN
     String? SLACK_CHANNEL
 
     String giturl = "https://github.com/nextstrain/ncov-ingest/archive/refs/heads/master.zip"
 
-    String? docker_img = "nextstrain/ncov-ingest:latest"
+    String docker_img = "nextstrain/ncov-ingest:latest"
     Int cpu = 16
     Int disk_size = 48  # In GiB
     Float memory = 3.5
@@ -45,14 +45,16 @@ task ncov_ingest {
     declare -a config
     config+=(
       fetch_from_database=True
-      trigger_rebuild=True
+      trigger_rebuild=False
+      keep_all_files=True
+      s3_src="s3://nextstrain-ncov-private"
+      s3_dst="s3://nextstrain-ncov-private/trial"
     )
 
     # Native run of snakemake?
     nextstrain build \
       --native \
-      --no-download \
-      --cpus ~{PROC} \
+      --cpus $PROC \
       --memory ~{memory}GiB \
       --exec env \
       . \
@@ -62,6 +64,8 @@ task ncov_ingest {
           --cores ${PROC} \
           --resources mem_mb=47000 \
           --printshellcmds
+
+    #--no-download 
 
     # Or maybe simplier? https://github.com/nextstrain/ncov-ingest/blob/master/.github/workflows/rebuild-open.yml#L26
     #./bin/rebuild open       # Make sure these aren't calling aws before using them
@@ -74,6 +78,9 @@ task ncov_ingest {
 
   output {
     File ncov_ingest_zip = "ncov_ingest.zip"
+    # File sequences_fasta = "ncov-ingest/data/gisaid/sequences.fasta"
+    # File metadata_tsv = "ncov-ingest/data/gisaid/metadata.tsv"
+    # File aligned_fasta = "ncov-ingest/data/gisaid/aligned.fasta"
     # Separate this out into sequences, metadata files for both open and closed
   }
   
